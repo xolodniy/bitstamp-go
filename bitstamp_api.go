@@ -16,6 +16,8 @@ import (
 
 var _cliId, _key, _secret string
 
+var _httpClient *http.Client
+
 var _url string = "https://www.bitstamp.net/api/v2"
 
 type ErrorResult struct {
@@ -115,6 +117,15 @@ func SetAuth(clientId, key, secret string) {
 	_cliId = clientId
 	_key = key
 	_secret = secret
+	_httpClient = &http.Client{}
+}
+
+func SetProxy(host, port string) {
+	_httpClient.Transport = &http.Transport{
+		Proxy: http.ProxyURL(&url.URL{
+			Host: host + ":" + port,
+		}),
+	}
 }
 
 // privateQuery submits an http.Request with key, sig & nonce
@@ -148,27 +159,25 @@ func privateQuery(path string, values url.Values, v interface{}) error {
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	// submit the http request
-	r, err := http.DefaultClient.Do(req)
+	r, err := _httpClient.Do(req)
 	if err != nil {
 		return err
-	}
-
-	// if no result interface, return
-	if v == nil {
-		return nil
 	}
 
 	// read the body of the http message into a byte array
 	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
 	if err != nil {
 		return err
 	}
+	defer r.Body.Close()
 
 	// is this an error?
 	if len(body) == 0 {
 		return fmt.Errorf("Response body 0 length")
 	}
+
+	fmt.Printf("\nReceived body fron bitstamp: %v\n", body)
+
 	e := make(map[string]interface{})
 	err = json.Unmarshal(body, &e)
 	if bsEr, ok := e["error"]; ok {
