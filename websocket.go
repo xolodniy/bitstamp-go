@@ -1,4 +1,4 @@
-package bitstamp
+package bitstamp_api
 
 import (
 	"encoding/json"
