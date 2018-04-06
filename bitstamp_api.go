@@ -21,9 +21,8 @@ var _httpClient *http.Client
 var _url string = "https://www.bitstamp.net/api/v2"
 
 type ErrorResult struct {
-	Status string `json:"status,string"`
-	Reason string `json:"reason,string"`
-	Code   string `json:"code,string"`
+	Status string              `json:"status"`
+	Reason map[string][]string `json:"reason"`
 }
 
 type AccountBalanceResult struct {
@@ -173,22 +172,16 @@ func privateQuery(path string, values url.Values, v interface{}) error {
 
 	// is this an error?
 	if len(body) == 0 {
-		return fmt.Errorf("Response body 0 length")
-	}
-
-	fmt.Printf("\nReceived body fron bitstamp: %v\n", body)
-
-	e := make(map[string]interface{})
-	err = json.Unmarshal(body, &e)
-	if bsEr, ok := e["error"]; ok {
-		return fmt.Errorf("%v", bsEr)
+		return fmt.Errorf("Bitstamp returns empty body in response")
 	}
 
 	// Check for status == error
-	err_result := ErrorResult{}
-	json.Unmarshal(body, &err_result)
-	if err_result.Status == "error" {
-		return fmt.Errorf("%#v", err_result)
+	errResult := ErrorResult{}
+	if err := json.Unmarshal(body, &errResult); err != nil {
+		return err
+	}
+	if errResult.Status == "error" {
+		return fmt.Errorf("%#v", errResult)
 	}
 
 	//parse the JSON response into the response object
